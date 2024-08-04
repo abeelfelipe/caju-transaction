@@ -26,7 +26,7 @@ public class MealBalanceService implements IBalanceService {
     @Override
     public Account updateBalanceWithFallback(Account account, BigDecimal totalAmount) throws InsufficientFundsTransactionException, UpdateAccountException {
         if(Objects.isNull(account) || Objects.isNull(totalAmount)) throw new UpdateAccountException("Unable to identify the account or amount to be updated.");
-        BigDecimal currentBalanceMeal = account.getFoodBalance();
+        BigDecimal currentBalanceMeal = account.getMealBalance();
 
         if(!isSufficientFunds(currentBalanceMeal, totalAmount)) {
             BigDecimal currentBalanceCash = account.getCashBalance();

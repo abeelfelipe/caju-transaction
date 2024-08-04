@@ -76,7 +76,7 @@ public class TransactionService {
     public ResponseDTO authTransactionWithFallback(TransactionDTO transactionDTO, boolean isConsiderMerchantForMCC) {
         try {
             Account account = accountService.getAccountById(transactionDTO.account());
-            accountService.updateAccountBalanceWithFallback(account, transactionDTO.totalAmount(), identifierMCCCategory(transactionDTO.mcc(), transactionDTO.merchant(), isConsiderMerchantForMCC));
+            account = accountService.updateAccountBalanceWithFallback(account, transactionDTO.totalAmount(), identifierMCCCategory(transactionDTO.mcc(), transactionDTO.merchant(), isConsiderMerchantForMCC));
 
             Transaction transaction = Transaction.builder()
                     .account(account)
@@ -98,12 +98,12 @@ public class TransactionService {
 
     private static MCCEnum identifierMCCCategory(String mccTransaction, String merchantTransaction, boolean considerMerchant) {
         if (MCCEnum.FOOD.getCategoryCodes().contains(mccTransaction) || (considerMerchant &&
-                MCCEnum.FOOD.getCompatibleMerchants().stream().anyMatch(merchantTransaction::contains))) {
+                MCCEnum.FOOD.getCompatibleMerchants().stream().anyMatch(compatibleMerchants -> merchantTransaction.toLowerCase().contains(compatibleMerchants.toLowerCase())))) {
             return MCCEnum.FOOD;
         }
 
         if (MCCEnum.MEAL.getCategoryCodes().contains(mccTransaction) || (considerMerchant &&
-                MCCEnum.MEAL.getCompatibleMerchants().stream().anyMatch(merchantTransaction::contains))) {
+                MCCEnum.MEAL.getCompatibleMerchants().stream().anyMatch(compatibleMerchants -> merchantTransaction.toLowerCase().contains(compatibleMerchants.toLowerCase())))) {
             return MCCEnum.MEAL;
         }
 
