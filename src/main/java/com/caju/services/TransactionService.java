@@ -1,11 +1,12 @@
 package com.caju.services;
 
 import com.caju.entities.Account;
+import com.caju.enums.CategoryWallet;
 import com.caju.exceptions.AccountNotFoundException;
 import com.caju.dto.TransactionDTO;
 import com.caju.entities.Transaction;
-import com.caju.enums.MCCEnum;
 import com.caju.enums.TransactionResponseEnum;
+import com.caju.exceptions.WalletNotFoundException;
 import com.caju.repositories.TransactionRepository;
 import com.caju.exceptions.InsufficientFundsTransactionException;
 import com.caju.dto.ResponseDTO;
@@ -15,6 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import static com.caju.enums.CategoryWallet.getCategoryByMcc;
+import static com.caju.utils.Utils.getMccByMerchant;
+
 @Service
 public class TransactionService {
 
@@ -23,6 +27,9 @@ public class TransactionService {
 
     @Autowired
     private AccountService accountService;
+
+    @Autowired
+    private WalletService walletService;
 
     /**
      * Retrieves all transactions from the repository.
@@ -43,10 +50,11 @@ public class TransactionService {
      * @throws AccountNotFoundException if the account ID is not found
      */
     @Transactional
-    public ResponseDTO authTransaction(TransactionDTO transactionDTO, boolean isConsiderMerchantForMCC) {
+    public ResponseDTO createTransaction(TransactionDTO transactionDTO, boolean isConsiderMerchantForMCC) {
         try {
             Account account = accountService.getAccountById(transactionDTO.account());
-            account = accountService.updateAccountBalance(account, transactionDTO.totalAmount(), identifierMCCCategory(transactionDTO.mcc(), transactionDTO.merchant(), isConsiderMerchantForMCC));
+            CategoryWallet categoryForTransaction = getCategoryForTransaction(transactionDTO, isConsiderMerchantForMCC);
+            walletService.updateAccountBalanceWallet(account, transactionDTO.totalAmount(), categoryForTransaction);
 
             Transaction transaction = Transaction.builder()
                     .account(account)
@@ -60,7 +68,7 @@ public class TransactionService {
             return new ResponseDTO(TransactionResponseEnum.APPROVED.getCode(), "Transaction approved");
         } catch (InsufficientFundsTransactionException insufficientFundsTransactionException) {
             return new ResponseDTO(TransactionResponseEnum.INSUFFICIENT_FUNDS.getCode(), "Transaction rejected: %s".formatted(insufficientFundsTransactionException.getMessage()));
-        } catch (Exception | AccountNotFoundException exception) {
+        } catch (Exception | WalletNotFoundException | AccountNotFoundException exception) {
             return new ResponseDTO(TransactionResponseEnum.ERROR.getCode(), "Transaction error: %s".formatted(exception.getMessage()));
         }
     }
@@ -73,10 +81,11 @@ public class TransactionService {
      * @return                           the response data transfer object
      */
     @Transactional
-    public ResponseDTO authTransactionWithFallback(TransactionDTO transactionDTO, boolean isConsiderMerchantForMCC) {
+    public ResponseDTO createTransactionWithFallback(TransactionDTO transactionDTO, boolean isConsiderMerchantForMCC) {
         try {
             Account account = accountService.getAccountById(transactionDTO.account());
-            account = accountService.updateAccountBalanceWithFallback(account, transactionDTO.totalAmount(), identifierMCCCategory(transactionDTO.mcc(), transactionDTO.merchant(), isConsiderMerchantForMCC));
+            CategoryWallet categoryForTransaction = getCategoryForTransaction(transactionDTO, isConsiderMerchantForMCC);
+            walletService.updateAccountBalanceWalletWithFallback(account, transactionDTO.totalAmount(), categoryForTransaction);
 
             Transaction transaction = Transaction.builder()
                     .account(account)
@@ -90,24 +99,19 @@ public class TransactionService {
             return new ResponseDTO(TransactionResponseEnum.APPROVED.getCode(), "Transaction approved");
         } catch (InsufficientFundsTransactionException insufficientFundsTransactionException) {
             return new ResponseDTO(TransactionResponseEnum.INSUFFICIENT_FUNDS.getCode(), "Transaction rejected: %s".formatted(insufficientFundsTransactionException.getMessage()));
-        } catch (Exception | AccountNotFoundException exception) {
+        } catch (Exception | WalletNotFoundException | AccountNotFoundException exception) {
             return new ResponseDTO(TransactionResponseEnum.ERROR.getCode(), "Transaction error: %s".formatted(exception.getMessage()));
         }
     }
 
-
-    private static MCCEnum identifierMCCCategory(String mccTransaction, String merchantTransaction, boolean considerMerchant) {
-        if (MCCEnum.FOOD.getCategoryCodes().contains(mccTransaction) || (considerMerchant &&
-                MCCEnum.FOOD.getCompatibleMerchants().stream().anyMatch(compatibleMerchants -> merchantTransaction.toLowerCase().contains(compatibleMerchants.toLowerCase())))) {
-            return MCCEnum.FOOD;
+    private static CategoryWallet getCategoryForTransaction(TransactionDTO transactionDTO, boolean isConsiderMerchantForMCC) {
+        if (isConsiderMerchantForMCC) {
+            String mcc = getMccByMerchant(transactionDTO.merchant());
+            if (mcc != null) {
+                return getCategoryByMcc(mcc);
+            }
         }
-
-        if (MCCEnum.MEAL.getCategoryCodes().contains(mccTransaction) || (considerMerchant &&
-                MCCEnum.MEAL.getCompatibleMerchants().stream().anyMatch(compatibleMerchants -> merchantTransaction.toLowerCase().contains(compatibleMerchants.toLowerCase())))) {
-            return MCCEnum.MEAL;
-        }
-
-        return MCCEnum.CASH;
+        return getCategoryByMcc(transactionDTO.mcc());
     }
 
 }

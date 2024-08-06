@@ -1,9 +1,6 @@
 CREATE TABLE IF NOT EXISTS accounts (
   id BIGINT NOT NULL,
    name VARCHAR(255),
-   food_balance DECIMAL,
-   meal_balance DECIMAL,
-   cash_balance DECIMAL,
    CONSTRAINT pk_accounts PRIMARY KEY (id)
 );
 

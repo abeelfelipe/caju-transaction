@@ -12,40 +12,40 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/transactions")
+@RequestMapping("/")
 public class TransactionController {
 
     @Autowired
     private TransactionService service;
 
     @Operation(summary = "Get all transactions")
-    @GetMapping("all")
+    @GetMapping("transaction/all")
     public ResponseEntity getAllTransactions() {
         return ResponseEntity.ok(service.getAllTransactions());
     }
 
     @Operation(summary = "Authenticates a transaction with fallback")
-    @PostMapping("/with-fallback")
+    @PostMapping("transaction/with-fallback")
     public ResponseEntity authTransactionWithFallBack(@RequestBody TransactionDTO transaction) {
-        return ResponseEntity.ok(service.authTransactionWithFallback(transaction, false));
+        return ResponseEntity.ok(service.createTransactionWithFallback(transaction, false));
     }
 
     @Operation(summary = "Authenticates a transaction")
-    @PostMapping
+    @PostMapping("transaction/")
     public ResponseEntity authTransaction(@RequestBody TransactionDTO transaction) {
-        return ResponseEntity.ok(service.authTransaction(transaction, false));
+        return ResponseEntity.ok(service.createTransaction(transaction, false));
     }
 
-    @Operation(summary = "Authenticates a transaction considerMerchantForMCC with fallback")
-    @PostMapping("/l2/with-fallback")
+    @Operation(summary = "Authenticates a transaction with fallback consider merchant for MCC ")
+    @PostMapping("/l2/transaction/with-fallback")
     public ResponseEntity authTransactionWithFallBackConsiderMerchantForMCC(@RequestBody TransactionDTO transaction) {
-        return ResponseEntity.ok(service.authTransactionWithFallback(transaction, true));
+        return ResponseEntity.ok(service.createTransactionWithFallback(transaction, true));
     }
 
-    @Operation(summary = "Authenticates a transaction consider Merchant For MCC")
-    @PostMapping("/l2")
+    @Operation(summary = "Authenticates a transaction consider merchant for MCC")
+    @PostMapping("/l2/transaction/")
     public ResponseEntity authTransactionConsiderMerchantForMCC(@RequestBody TransactionDTO transaction) {
-        return ResponseEntity.ok(service.authTransaction(transaction, true));
+        return ResponseEntity.ok(service.createTransaction(transaction, true));
     }
 }
 
